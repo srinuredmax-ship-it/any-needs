@@ -1,0 +1,11 @@
+import { Router } from "express";
+import { z } from "zod";
+import { prisma } from "../db.js";
+import { requireAdmin } from "../middleware/auth.js";
+export const productsRouter=Router();
+const productInput=z.object({name:z.string().min(2),slug:z.string().min(2).regex(/^[a-z0-9-]+$/),category:z.string().min(2),unit:z.string().min(1),price:z.coerce.number().int().nonnegative(),stock:z.coerce.number().int().nonnegative(),imageUrl:z.string().url().nullable().optional(),icon:z.string().max(8).default("🛍️"),visible:z.boolean().default(true)});
+productsRouter.get("/",async(_req,res)=>{const rows=await prisma.product.findMany({where:{visible:true,archived:false},orderBy:[{category:"asc"},{name:"asc"}]});res.json(rows);});
+productsRouter.get("/admin",requireAdmin,async(_req,res)=>res.json(await prisma.product.findMany({orderBy:[{category:"asc"},{name:"asc"}]})));
+productsRouter.post("/",requireAdmin,async(req,res)=>res.status(201).json(await prisma.product.create({data:productInput.parse(req.body)})));
+productsRouter.patch("/:id",requireAdmin,async(req,res)=>res.json(await prisma.product.update({where:{id:String(req.params.id)},data:productInput.partial().parse(req.body)})));
+productsRouter.delete("/:id",requireAdmin,async(req,res)=>{await prisma.product.update({where:{id:String(req.params.id)},data:{archived:true,visible:false}});res.status(204).end();});

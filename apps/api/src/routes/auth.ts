@@ -1,0 +1,12 @@
+import { Router } from "express";
+import bcrypt from "bcryptjs";
+import { createHmac,randomInt } from "node:crypto";
+import { z } from "zod";
+import { prisma } from "../db.js";
+import { config } from "../config.js";
+import { signToken } from "../auth.js";
+export const authRouter=Router();
+const phoneSchema=z.object({phone:z.string().regex(/^\+?[1-9]\d{7,14}$/)});
+authRouter.post("/otp/request",async(req,res)=>{const {phone}=phoneSchema.parse(req.body);const code=String(randomInt(100000,999999));const codeHash=createHmac("sha256",config.OTP_SECRET).update(`${phone}:${code}`).digest("hex");await prisma.otpCode.create({data:{phone,codeHash,expiresAt:new Date(Date.now()+5*60_000)}});if(config.OTP_PROVIDER==="console") console.log(`[Any Needs OTP] ${phone}: ${code}`);res.json({ok:true,expiresIn:300,...(process.env.NODE_ENV!=="production"?{devCode:code}:{})});});
+authRouter.post("/otp/verify",async(req,res)=>{const body=phoneSchema.extend({code:z.string().length(6)}).parse(req.body);const otp=await prisma.otpCode.findFirst({where:{phone:body.phone,usedAt:null,expiresAt:{gt:new Date()}},orderBy:{createdAt:"desc"}});const hash=createHmac("sha256",config.OTP_SECRET).update(`${body.phone}:${body.code}`).digest("hex");if(!otp||hash!==otp.codeHash)return res.status(400).json({error:"Invalid or expired OTP"});const user=await prisma.$transaction(async tx=>{await tx.otpCode.update({where:{id:otp.id},data:{usedAt:new Date()}});return tx.user.upsert({where:{phone:body.phone},update:{},create:{phone:body.phone}})});res.json({token:signToken({sub:user.id,role:user.role,phone:user.phone||undefined}),user:{id:user.id,phone:user.phone,role:user.role,name:user.name}});});
+authRouter.post("/admin/login",async(req,res)=>{const body=z.object({email:z.string().email(),password:z.string().min(8)}).parse(req.body);const user=await prisma.user.findUnique({where:{email:body.email}});if(!user?.passwordHash||user.role!=="ADMIN"||!(await bcrypt.compare(body.password,user.passwordHash)))return res.status(401).json({error:"Incorrect email or password"});res.json({token:signToken({sub:user.id,role:"ADMIN",email:user.email||undefined}),user:{id:user.id,email:user.email,role:user.role,name:user.name}});});

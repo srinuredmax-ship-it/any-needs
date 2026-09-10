@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: anyneeds
+      POSTGRES_PASSWORD: anyneeds_local
+      POSTGRES_DB: anyneeds
+    ports: ["5432:5432"]
+    volumes: ["anyneeds_pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anyneeds"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  anyneeds_pg:

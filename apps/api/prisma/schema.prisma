@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  CONFIRMED
+  PACKING
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  ONLINE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id String @id @default(cuid())
+  phone String? @unique
+  email String? @unique
+  name String?
+  passwordHash String?
+  role Role @default(CUSTOMER)
+  addresses Address[]
+  orders Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label String @default("Home")
+  line1 String
+  line2 String?
+  city String
+  state String
+  pincode String
+  landmark String?
+  isDefault Boolean @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  category String
+  unit String
+  price Int
+  stock Int @default(0)
+  imageUrl String?
+  icon String @default("🛍️")
+  visible Boolean @default(true)
+  archived Boolean @default(false)
+  orderItems OrderItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([category, visible, archived])
+}
+
+model Order {
+  id String @id @default(cuid())
+  trackingCode String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  addressId String?
+  deliveryAddress Json
+  status OrderStatus @default(CONFIRMED)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentOrderId String?
+  paymentId String?
+  subtotal Int
+  deliveryFee Int @default(0)
+  total Int
+  items OrderItem[]
+  statusEvents OrderStatusEvent[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product Product @relation(fields: [productId], references: [id])
+  name String
+  unit String
+  price Int
+  quantity Int
+}
+
+model OrderStatusEvent {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status OrderStatus
+  note String?
+  createdAt DateTime @default(now())
+  @@index([orderId, createdAt])
+}
+
+model OtpCode {
+  id String @id @default(cuid())
+  phone String
+  codeHash String
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([phone, expiresAt])
+}

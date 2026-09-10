@@ -1,0 +1,37 @@
+ANY NEEDS — RUN LOCALLY
+
+1. Install Node.js 20+, Docker Desktop, and npm.
+2. Open a terminal in this extracted folder.
+3. Run: docker compose up -d
+4. Run: npm install
+5. Copy apps/api/.env.example to apps/api/.env
+6. Replace JWT_SECRET and OTP_SECRET with long random values.
+7. Run: npm run db:generate
+8. Run: npm run db:migrate
+9. Run: npm run db:seed
+10. Run: npm run dev:api
+11. In another terminal, copy apps/web/.env.local.example to apps/web/.env.local
+12. Run: npm run dev:web
+
+CUSTOMER WEB APP: http://localhost:3000
+ADMIN DASHBOARD: http://localhost:3000/admin
+
+DEFAULT ADMIN
+Email: admin@anyneeds.in
+Password: SetYourOwnAdminPassword123!
+Change this password before deployment.
+
+MOBILE APP
+1. Copy apps/mobile/.env.example to apps/mobile/.env
+2. Set EXPO_PUBLIC_API_URL to http://YOUR-COMPUTER-IP:4000
+3. Run: npm run dev:mobile
+4. Scan the Expo QR code for the JavaScript-only preview.
+
+Razorpay uses a native module, so create a development/native build:
+cd apps/mobile
+npx expo prebuild
+npx expo run:android
+or: npx expo run:ios
+
+Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to apps/api/.env to enable online payments.
+For real OTP delivery, connect your SMS provider in apps/api/src/routes/auth.ts and set OTP_PROVIDER accordingly.
