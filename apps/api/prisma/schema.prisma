@@ -13,6 +13,7 @@ enum Role {
 }
 
 enum OrderStatus {
+  AWAITING_PAYMENT
   CONFIRMED
   PACKING
   OUT_FOR_DELIVERY
@@ -132,3 +133,4 @@ model OtpCode {
   createdAt DateTime @default(now())
   @@index([phone, expiresAt])
 }
+
