@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
 import { initializeCatalog } from './catalog.mjs';
+import { initializeAdmin } from './admin.mjs';
 const children = new Set();
 let stopping = false;
 function stop(code) {
@@ -25,6 +26,6 @@ const migration = spawn(process.execPath, ['node_modules/prisma/build/index.js',
 const migrated = await new Promise((resolve, reject) => { migration.on('exit', resolve); migration.on('error', reject); });
 if (migrated !== 0) process.exit(1);
 const database = new PrismaClient();
-try { await initializeCatalog(database); } finally { await database.$disconnect(); }
+try { await initializeCatalog(database); await initializeAdmin(database); } finally { await database.$disconnect(); }
 run(['apps/api/dist/src/index.js'], { ...process.env, PORT: '4000' });
 run(['apps/web/node_modules/next/dist/bin/next', 'start', 'apps/web', '-p', process.env.PORT || '3000', '-H', '0.0.0.0']);
