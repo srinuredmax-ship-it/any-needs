@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process';
 import { PrismaClient } from '@prisma/client';
 import { initializeCatalog } from './catalog.mjs';
 import { initializeAdmin } from './admin.mjs';
+import { transferDatabase } from './transfer.mjs';
 const children = new Set();
 let stopping = false;
 function stop(code) {
@@ -22,9 +23,13 @@ function run(args, env = process.env) {
   });
 }
 for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => stop(0));
+const sourceUrl = process.env.DATABASE_URL;
+const targetUrl = process.env.DATABASE_TRANSFER_TARGET;
+if (targetUrl) process.env.DATABASE_URL = targetUrl;
 const migration = spawn(process.execPath, ['node_modules/prisma/build/index.js', 'migrate', 'deploy', '--schema', 'apps/api/prisma/schema.prisma'], { stdio: 'inherit' });
 const migrated = await new Promise((resolve, reject) => { migration.on('exit', resolve); migration.on('error', reject); });
 if (migrated !== 0) process.exit(1);
+if (targetUrl) await transferDatabase(sourceUrl, targetUrl);
 const database = new PrismaClient();
 try { await initializeCatalog(database); await initializeAdmin(database); } finally { await database.$disconnect(); }
 run(['apps/api/dist/src/index.js'], { ...process.env, PORT: '4000' });
