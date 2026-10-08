@@ -1,4 +1,4 @@
-# The database any-needs-db already exists in My Workspace.
+# Database hosted on Neon; set DATABASE_URL securely in Render.
 # Configure SMS and payment secrets in the service settings before customer launch.
 services:
 - type: web
@@ -12,9 +12,7 @@ services:
   - key: NODE_ENV
     value: production
   - key: DATABASE_URL
-    fromDatabase:
-      name: any-needs-db
-      property: connectionString
+    sync: false
   - key: JWT_SECRET
     generateValue: true
   - key: OTP_SECRET
