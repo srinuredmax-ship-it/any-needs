@@ -21,6 +21,12 @@ services:
     generateValue: true
   - key: RAZORPAY_WEBHOOK_SECRET
     generateValue: true
+  - key: WEB_ORIGIN
+    value: https://any-needs.onrender.com
+  - key: ADMIN_BOOTSTRAP_EMAIL
+    value: admin@anyneeds.in
+  - key: ADMIN_BOOTSTRAP_PASSWORD
+    generateValue: true
   - key: OTP_PROVIDER
     value: twilio
   region: singapore
