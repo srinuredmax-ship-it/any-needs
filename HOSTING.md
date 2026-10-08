@@ -1,69 +1,24 @@
-# Any Needs browser access
+# Any Needs hosting
 
-Goal: customers open one permanent HTTPS website and use the shop without
-starting PowerShell, Docker, an API process, or a temporary tunnel on their PCs.
+Website: https://any-needs.onrender.com
+Admin: https://any-needs.onrender.com/admin
 
-## Prepared changes
+Render runs the Next.js website and Express API together in the Docker container. The browser uses /api; Next proxies to the API on localhost:4000. Customers need no terminal or local server. The free Render instance can sleep when idle, so the first visit can take longer.
 
-The web client defaults to `/api`. Next.js proxies that path to the backend.
-Set `API_INTERNAL_URL` on the web host before building to the hosted API address.
-Leave `NEXT_PUBLIC_API_URL` unset for this arrangement. The API production start
-command now matches TypeScript's actual output directory.
+## Database
 
-## Hosting requirements
+Neon project: small-king-40553072, production branch, Free plan. DATABASE_URL is configured securely in Render; never commit it. render.yaml leaves that value externally managed. Free quotas and provider terms apply; no lifetime availability guarantee is made.
 
-Deploy the web service, API service and persistent PostgreSQL database to an
-always-running host. Host settings, rather than customers' terminals, must start
-and restart these services. Configure database backups and HTTPS.
+For the one-time move, DATABASE_TRANSFER_TARGET points to Neon while DATABASE_URL still points to the original Render database. Startup applies migrations on the target, locks source tables against concurrent changes, copies all seven application models, and compares every row before proceeding. It refuses to overwrite a different populated destination. A successful transfer installs write-blocking triggers on the retired source database, keeping a consistent readable snapshot and preventing the old deployment from accepting writes during switchover. After verification, set DATABASE_URL to Neon and DATABASE_TRANSFER_TARGET to an empty string. Subsequent startups perform ordinary Prisma migrations and preserve existing catalog/admin records.
 
-API setup: install dependencies, generate Prisma client, build the API, run
-`npm run db:deploy -w @anyneeds/api`, and start with
-`npm run start -w @anyneeds/api`.
+The old Render free database expires 7 November 2026. It is retained only as a point-in-time fallback. A rollback must account for writes made on Neon since migration; do not simply switch back to the old snapshot. If deliberately restoring the old source, its any_needs_retired triggers must be removed first, after data reconciliation. Neither database is deleted by migration.
 
-Web setup: install dependencies, set `API_INTERNAL_URL`, build the web app and
-start with `npm run start -w @anyneeds/web`.
+## Secrets and remaining launch checks
 
-Configure `DATABASE_URL`, `JWT_SECRET`, `OTP_SECRET`, `WEB_ORIGIN` and payment
-credentials in the host's secret settings. Never include secrets in source.
-`WEB_ORIGIN` must be the HTTPS website origin. Use `NODE_ENV=production`.
+The initial administrator is admin@anyneeds.in. Its existing bcrypt hash is transferred; do not reset the password or run the demo seed. ADMIN_BOOTSTRAP_PASSWORD is a host secret and only creates an absent administrator.
 
-## Work required before going live
+Customer SMS needs TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and TWILIO_MESSAGING_SERVICE_SID configured in Render, with a working sender. Production does not expose development OTP codes.
 
-- Configure Twilio SMS delivery using the account SID, auth token and messaging
-  service SID in the host settings. The adapter is implemented; actual delivery
-  requires an active sender and approved configuration for India. Production
-  never logs the OTP or exposes it as a development code. Test delivery before launch.
-- Import existing product and account data or safely provision it. Do not run
-  the current demo seed on a live database: it resets stock and sets a known
-  admin password. Use a private admin password.
-- The hosted branch implements signature-checked, idempotent payment confirmation.
-  Compare it with the uncommitted Windows webhook work before merging. Configure
-  Razorpay payment.captured at https://YOUR-HOST/api/payments/razorpay/webhook
-  using the freshly generated host webhook secret.
-- Verify login, saved addresses, COD, payment confirmation, tracking and admin
-  management with the user's laptop servers switched off.
-- Configure live Razorpay credentials for real payments. UPI authorisation may
-  still require a bank/UPI app; hosting removes the development terminal steps.
+Online checkout needs RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET. Configure payment.captured webhook at https://any-needs.onrender.com/api/payments/razorpay/webhook using the same RAZORPAY_WEBHOOK_SECRET configured in Render. Test real SMS, checkout and payment confirmation before customer launch.
 
-These changes prepare the code; they do not create a hosted website or activate
-SMS and real payments. Deployment requires access to the selected hosting
-account and secure service configuration.
-
-## Prepared Render deployment
-
-`render.yaml` provisions an always-running web service and a private PostgreSQL
-database. `Dockerfile` builds both applications; `deploy/start.mjs` applies
-existing Prisma migrations and starts both services. If either exits, the
-container exits so the hosting platform can restart it. The blueprint uses
-paid plans; review Render pricing before creating resources. No services or
-charges have been created by preparing these files.
-
-Connect GitHub and Render to publish this branch and deploy the blueprint.
-Enter service credentials only in Render secret settings. After Render provides
-the website URL, set WEB_ORIGIN to that HTTPS origin. Configure Razorpay's
-webhook with the same URL, and import the existing database safely.
-
-Validation: API and web builds passed. A local HTTP check verified `/api/health`,
-invalid webhook rejection and valid signed raw-body acceptance through the
-website proxy. Docker image building, hosted migrations, real SMS delivery and
-real checkout are pending; Docker is unavailable in this workspace.
+The Docker/API/web build, single-origin health endpoint and webhook signature handling have been checked. Database transfer completion and hosted health are checked through deployment logs and direct Neon queries.
