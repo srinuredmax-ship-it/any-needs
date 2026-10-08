@@ -1,41 +1,32 @@
+# Database hosted on Neon; set DATABASE_URL securely in Render.
+# Configure SMS and payment secrets in the service settings before customer launch.
 services:
-  - type: web
-    name: any-needs
-    runtime: docker
-    plan: starter
-    healthCheckPath: /api/health
-    envVars:
-      - key: PORT
-        value: 3000
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        fromDatabase:
-          name: any-needs-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: OTP_SECRET
-        generateValue: true
-      - key: RAZORPAY_WEBHOOK_SECRET
-        generateValue: true
-      - key: WEB_ORIGIN
-        sync: false
-      - key: OTP_PROVIDER
-        value: twilio
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_MESSAGING_SERVICE_SID
-        sync: false
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
-databases:
-  - name: any-needs-db
-    plan: basic-256mb
-    databaseName: anyneeds
-    user: anyneeds
-    ipAllowList: []
+- type: web
+  name: any-needs
+  runtime: docker
+  plan: free
+  healthCheckPath: /api/health
+  envVars:
+  - key: PORT
+    value: 3000
+  - key: NODE_ENV
+    value: production
+  - key: DATABASE_URL
+    sync: false
+  - key: JWT_SECRET
+    generateValue: true
+  - key: OTP_SECRET
+    generateValue: true
+  - key: RAZORPAY_WEBHOOK_SECRET
+    generateValue: true
+  - key: WEB_ORIGIN
+    value: https://any-needs.onrender.com
+  - key: ADMIN_BOOTSTRAP_EMAIL
+    value: admin@anyneeds.in
+  - key: ADMIN_BOOTSTRAP_PASSWORD
+    generateValue: true
+  - key: OTP_PROVIDER
+    value: twilio
+  region: singapore
+  repo: https://github.com/srinuredmax-ship-it/any-needs
+  branch: feature/browser-only-hosting
